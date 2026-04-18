@@ -4,7 +4,7 @@ import { AuthService } from '../services/auth.service';
 
 export const basicAuthInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
-  const apiUrl = 'BACKEND_URL_AQUI';
+  const apiUrl = 'https://datos-gh6q.onrender.com';
   
   const newReq = req.url.startsWith('/api') 
     ? req.clone({ url: `${apiUrl}${req.url}` }) 
