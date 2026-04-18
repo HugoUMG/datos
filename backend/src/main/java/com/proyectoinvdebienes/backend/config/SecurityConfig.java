@@ -23,6 +23,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/").permitAll()
+                .requestMatchers("/api/inventory/assets/*/qr.png").permitAll()
+                .requestMatchers("/api/employee/me/assets/*/qr.png").permitAll()
                 .requestMatchers("/api/auth/me").authenticated()
                 .requestMatchers("/api/inventory/assets/*/qr.png").permitAll()
                 .requestMatchers("/api/employee/me/assets/*/qr.png").permitAll()

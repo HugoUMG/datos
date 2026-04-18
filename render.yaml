@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: datos-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /
+
+  - type: static
+    name: datos-frontend
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist/frontend/browser
+    pullRequestPreviewsEnabled: true
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://datos-backend.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
