@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><title>Microservicio consumidor</title><link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"></head>
+<body><div class="container">
+  <div class="card">
+    <h1>Microservicio de Consumo API REST</h1>
+    <p>Backend: {{ backend }}</p>
+    <p>Usuario de conexión: {{ user }}</p>
+    <a class="button" href="/suppliers">Suppliers</a>
+    <a class="button" href="/budget-lines">Budget Lines</a>
+    <a class="button" href="/departments">Departments</a>
+    <a class="button" href="/employees">Employees</a>
+  </div>
+</div></body></html>

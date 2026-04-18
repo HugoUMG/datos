@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><title>Employees</title><link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"></head>
+<body><div class="container">
+  <a class="button" href="/">Inicio</a>
+  <div class="card">
+    <h2>Employees</h2>
+    <form method="post" class="grid">
+      <input name="fullName" placeholder="fullName" required>
+      <input name="email" placeholder="email" required>
+      <select name="departmentId" required>
+        {% for dep in departments %}
+        <option value="{{ dep.id }}">{{ dep.name }} ({{ dep.id }})</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Agregar</button>
+    </form>
+  </div>
+  <div class="card">
+    <table><thead><tr><th>Registro</th></tr></thead><tbody>{% for row in rows %}<tr><td><pre>{{ row }}</pre></td></tr>{% endfor %}</tbody></table>
+  </div>
+</div></body></html>

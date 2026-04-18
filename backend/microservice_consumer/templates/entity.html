@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><title>{{ title }}</title><link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"></head>
+<body><div class="container">
+  <a class="button" href="/">Inicio</a>
+  <div class="card">
+    <h2>{{ title }}</h2>
+    <form method="post" class="grid">
+      {% if endpoint == '/suppliers' %}
+      <input name="name" placeholder="name" required>
+      <input name="taxId" placeholder="taxId" required>
+      <input name="email" placeholder="email" required>
+      <input name="phone" placeholder="phone">
+      {% elif endpoint == '/budget-lines' %}
+      <input name="code" placeholder="code" required>
+      <input name="description" placeholder="description" required>
+      <input name="allocatedAmount" placeholder="allocatedAmount" required>
+      {% elif endpoint == '/departments' %}
+      <input name="name" placeholder="name" required>
+      <input name="costCenterCode" placeholder="costCenterCode" required>
+      {% endif %}
+      <button type="submit">Agregar</button>
+    </form>
+  </div>
+  <div class="card">
+    <table><thead><tr><th>Registro</th></tr></thead><tbody>{% for row in rows %}<tr><td><pre>{{ row }}</pre></td></tr>{% endfor %}</tbody></table>
+  </div>
+</div></body></html>
