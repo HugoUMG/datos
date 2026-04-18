@@ -24,6 +24,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/").permitAll()
                 .requestMatchers("/api/auth/me").authenticated()
+                .requestMatchers("/api/inventory/assets/*/qr.png").permitAll()
+                .requestMatchers("/api/employee/me/assets/*/qr.png").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMINISTRADOR")
                 .requestMatchers("/api/employee/me/export").hasAnyRole("EMPLEADO", "ADMINISTRADOR")
                 .requestMatchers("/api/reports/**").hasAnyRole("ADMINISTRADOR", "FINANZAS", "INVENTARIO")
