@@ -4,6 +4,8 @@ import com.proyectoinvdebienes.backend.domain.model.Asset;
 import com.proyectoinvdebienes.backend.domain.model.Assignment;
 import com.proyectoinvdebienes.backend.service.AssignmentService;
 import com.proyectoinvdebienes.backend.service.ReportService;
+import com.proyectoinvdebienes.backend.web.dto.EmployeeAssignedAssetDto;
+import com.proyectoinvdebienes.backend.web.dto.EmployeeInvestmentSummaryDto;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,17 @@ public class ReportsController {
     @GetMapping("/employee/{employeeId}")
     public List<Assignment> employeeReport(@PathVariable Long employeeId) {
         return reportService.assignmentsByEmployee(employeeId);
+    }
+
+
+    @GetMapping("/invested-by-employee")
+    public List<EmployeeInvestmentSummaryDto> investedByEmployee() {
+        return reportService.investedByEmployee();
+    }
+
+    @GetMapping("/employee/{employeeId}/assigned-assets")
+    public List<EmployeeAssignedAssetDto> assignedAssetsByEmployee(@PathVariable Long employeeId) {
+        return reportService.activeAssignedAssetsByEmployee(employeeId);
     }
 
     @GetMapping("/upcoming-disposals")

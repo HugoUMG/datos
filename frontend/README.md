@@ -34,3 +34,16 @@ npm start
 ```
 
 `npm start` usa `proxy.conf.json` para enrutar `/api` a `http://localhost:8080`.
+
+## Despliegue en Render
+
+Este frontend está preparado para desplegarse como **Static Site** en Render:
+
+- Se genera con `npm run build`.
+- El directorio publicado es `dist/frontend/browser`.
+- `public/_redirects` incluye:
+  - Proxy de `/api/*` hacia el backend desplegado.
+  - Fallback SPA `/* -> /index.html` para evitar errores **Not Found** al recargar rutas como `/menu` o `/inventario`.
+- Si tu backend cambia de dominio, ajusta `src/index.html` en la meta `app-api-base-url`.
+
+También se incluye `render.yaml` en la raíz del repositorio para definir backend + frontend en un solo blueprint.

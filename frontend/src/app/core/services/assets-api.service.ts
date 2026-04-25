@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { resolveApiUrl } from '../config/api-base-url';
 import { AdminUser, Asset, Assignment, BudgetLine, Department, Disposal, Employee, InvestedSummary, PurchaseInvoice, Supplier } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -56,11 +57,11 @@ export class AssetsApiService {
   }
 
   inventoryAssetQr(assetId: number): string {
-    return `${this.base}/inventory/assets/${assetId}/qr.png`;
+    return resolveApiUrl(`${this.base}/inventory/assets/${assetId}/qr.png`);
   }
 
   employeeAssetQr(assetId: number): string {
-    return `${this.base}/employee/me/assets/${assetId}/qr.png`;
+    return resolveApiUrl(`${this.base}/employee/me/assets/${assetId}/qr.png`);
   }
 
   createAssignment(payload: {

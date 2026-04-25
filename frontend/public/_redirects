@@ -1,1 +1,5 @@
+# Proxy de API hacia el backend desplegado en Render
 /api/*  https://datos-gh6q.onrender.com/api/:splat  200
+
+# Fallback SPA para rutas de Angular (/login, /menu, /inventario, etc.)
+/*  /index.html  200

@@ -8,6 +8,8 @@ import com.proyectoinvdebienes.backend.domain.model.Disposal;
 import com.proyectoinvdebienes.backend.repository.AssetRepository;
 import com.proyectoinvdebienes.backend.repository.AssignmentRepository;
 import com.proyectoinvdebienes.backend.repository.DisposalRepository;
+import com.proyectoinvdebienes.backend.web.dto.EmployeeAssignedAssetDto;
+import com.proyectoinvdebienes.backend.web.dto.EmployeeInvestmentSummaryDto;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -42,6 +44,15 @@ public class ReportService {
 
     public List<Assignment> assignmentsByEmployee(Long employeeId) {
         return assignmentRepository.findByEmployeeId(employeeId);
+    }
+
+
+    public List<EmployeeInvestmentSummaryDto> investedByEmployee() {
+        return assignmentRepository.findInvestmentByEmployee();
+    }
+
+    public List<EmployeeAssignedAssetDto> activeAssignedAssetsByEmployee(Long employeeId) {
+        return assignmentRepository.findActiveAssignedAssetsByEmployeeId(employeeId);
     }
 
     public List<Asset> upcomingDisposals() {
