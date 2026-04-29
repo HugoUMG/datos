@@ -1,0 +1,1 @@
+# Reglas base de ejemplo.
