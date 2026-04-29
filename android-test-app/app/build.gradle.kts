@@ -15,7 +15,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
+        val backendBaseUrl = (project.findProperty("BACKEND_BASE_URL") as String?) ?: "http://192.168.1.4:8080/"
+        buildConfigField("String", "BASE_URL", "\"$backendBaseUrl\"")
     }
 
     buildTypes {
@@ -58,6 +59,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.activity:activity-compose:1.9.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
+    implementation("com.google.android.material:material:1.12.0")
 
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui")
