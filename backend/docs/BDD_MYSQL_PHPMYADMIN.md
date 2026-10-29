@@ -315,10 +315,10 @@ Con esto ya queda habilitado el ciclo de vida completo para consultas/reportes d
 El backend ahora autentica usuarios desde la tabla `user_account` (HTTP Basic).
 Ahora `user_account` se vincula con `employee` mediante `employee_id` para habilitar validaciones y permisos por tipo de usuario.
 
-Credencial administrador por defecto:
+Credencial administrador:
 
 - Usuario: `admin`
-- Contraseña: `admin123`
+- Contraseña: la definida en la variable de entorno `SEED_ADMIN_PASSWORD`.
 
 Al iniciar la aplicación se auto-registran si no existen: `admin`, `compras`, `inventario`, `finanzas`.
 

@@ -33,6 +33,11 @@ public class AcquisitionController {
         return acquisitionService.createInvoice(request);
     }
 
+    @GetMapping("/invoices")
+    public List<PurchaseInvoice> listInvoices() {
+        return acquisitionService.listInvoices();
+    }
+
     @PostMapping("/suppliers")
     @ResponseStatus(HttpStatus.CREATED)
     public Supplier createSupplier(@Valid @RequestBody CreateSupplierRequest request) {

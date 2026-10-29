@@ -59,7 +59,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-url', default='http://localhost:8080')
     parser.add_argument('--user', default='admin')
-    parser.add_argument('--password', default='admin123')
+    parser.add_argument('--password', required=True)
     parser.add_argument('--entity', required=True, choices=['suppliers', 'budget-lines', 'departments', 'employees'])
     parser.add_argument('--count', type=int, default=1000)
     parser.add_argument('--department-id', type=int, default=1)

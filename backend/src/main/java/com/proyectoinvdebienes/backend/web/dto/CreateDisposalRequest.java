@@ -2,11 +2,14 @@ package com.proyectoinvdebienes.backend.web.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record CreateDisposalRequest(
-        @NotNull Long assetId,
-        @NotBlank String reason,
+        @NotNull(message = "Selecciona un activo") Long assetId,
+        @NotBlank(message = "El motivo es obligatorio")
+        @Size(max = 300, message = "El motivo admite máximo 300 caracteres") String reason,
         String disposalType,
-        @NotBlank String requestedBy
+        @NotBlank(message = "Indica quién solicita la baja")
+        @Size(max = 80, message = "El solicitante admite máximo 80 caracteres") String requestedBy
 ) {
 }

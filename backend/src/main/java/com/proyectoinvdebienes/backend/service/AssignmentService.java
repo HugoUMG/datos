@@ -37,6 +37,12 @@ public class AssignmentService {
 
     @Transactional
     public Assignment assignAsset(CreateAssignmentRequest request) {
+        DateRules.requireReasonable(request.assignedAt(), "La fecha de asignación");
+        DateRules.requireReasonable(request.expectedReturnAt(), "La fecha de devolución");
+        if (request.expectedReturnAt() != null && request.expectedReturnAt().isBefore(request.assignedAt())) {
+            throw new BusinessException("La fecha de devolución no puede ser anterior a la de asignación.");
+        }
+
         Asset asset = assetRepository.findById(request.assetId())
                 .orElseThrow(() -> new NotFoundException("Activo no encontrado"));
 

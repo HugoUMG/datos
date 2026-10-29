@@ -22,6 +22,8 @@ export interface PurchaseInvoice {
   invoiceDate: string;
   totalAmount: number;
   notes?: string;
+  supplier?: Supplier;
+  budgetLine?: BudgetLine;
 }
 
 export interface Asset {

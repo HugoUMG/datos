@@ -11,9 +11,10 @@ Módulos disponibles:
 - Bajas y Enajenación
 - Reportes
 
-### Credenciales admin (explícitas)
-- **Usuario:** `admin`
-- **Contraseña:** `admin123`
+### Usuarios iniciales
+Al arrancar se crean `admin`, `compras`, `inventario` y `finanzas` con las contraseñas de las variables
+`SEED_ADMIN_PASSWORD`, `SEED_COMPRAS_PASSWORD`, `SEED_INVENTARIO_PASSWORD` y `SEED_FINANZAS_PASSWORD`.
+Las contraseñas nunca se escriben en el repositorio.
 
 ## Frontend (Angular)
 

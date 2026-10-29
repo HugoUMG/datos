@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val vm: MainViewModel = viewModel()
                     var username by remember { mutableStateOf("admin") }
-                    var password by remember { mutableStateOf("admin123") }
+                    var password by remember { mutableStateOf("") }
 
                     Column(
                         modifier = Modifier

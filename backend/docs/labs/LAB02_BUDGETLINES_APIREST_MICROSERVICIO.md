@@ -9,7 +9,7 @@ Registrar partidas presupuestarias por API y consumo web.
 
 ## 2) Prueba en Postman
 - URL: `http://localhost:8080/api/data/budget-lines`
-- Auth Basic: `admin/admin123`
+- Auth Basic: `admin/<SEED_ADMIN_PASSWORD>`
 - Body:
 ```json
 {"code":"BL-DEMO-01","description":"Partida Demo","allocatedAmount":10000}

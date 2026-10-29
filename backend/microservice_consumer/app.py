@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8080')
 BACKEND_USER = os.getenv('BACKEND_USER', 'admin')
-BACKEND_PASS = os.getenv('BACKEND_PASS', 'admin123')
+BACKEND_PASS = os.getenv('BACKEND_PASS', '')
 
 
 def auth_headers() -> Dict[str, str]:

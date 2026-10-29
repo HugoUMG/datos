@@ -1,5 +1,4 @@
 const META_API_BASE = 'app-api-base-url';
-const DEFAULT_RENDER_BACKEND = 'https://datos-gh6q.onrender.com';
 
 function readApiBaseFromMeta(): string {
   if (typeof document === 'undefined') {
@@ -14,18 +13,13 @@ function normalizeUrl(value: string): string {
   return value.replace(/\/$/, '');
 }
 
+/**
+ * Base del backend. Si la meta `app-api-base-url` está vacía se usan rutas relativas (/api/...):
+ * en local las reenvía proxy.conf.json y en Render la regla de rewrite del sitio estático.
+ */
 export function getApiBaseUrl(): string {
   const metaValue = readApiBaseFromMeta();
-
-  if (metaValue) {
-    return normalizeUrl(metaValue);
-  }
-
-  if (typeof window !== 'undefined' && window.location.hostname.endsWith('.onrender.com')) {
-    return DEFAULT_RENDER_BACKEND;
-  }
-
-  return '';
+  return metaValue ? normalizeUrl(metaValue) : '';
 }
 
 export function resolveApiUrl(url: string): string {

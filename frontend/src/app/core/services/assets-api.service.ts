@@ -21,6 +21,10 @@ export class AssetsApiService {
     return this.http.post<PurchaseInvoice>(`${this.base}/acquisitions/invoices`, payload);
   }
 
+  listInvoices(): Observable<PurchaseInvoice[]> {
+    return this.http.get<PurchaseInvoice[]>(`${this.base}/acquisitions/invoices`);
+  }
+
   createSupplier(payload: { name: string; taxId: string; email: string; phone?: string }): Observable<Supplier> {
     return this.http.post<Supplier>(`${this.base}/acquisitions/suppliers`, payload);
   }
@@ -75,6 +79,10 @@ export class AssetsApiService {
 
   returnAssignment(assignmentId: number): Observable<Assignment> {
     return this.http.post<Assignment>(`${this.base}/assignments/${assignmentId}/return`, {});
+  }
+
+  listAssignments(): Observable<Assignment[]> {
+    return this.http.get<Assignment[]>(`${this.base}/assignments`);
   }
 
   listAssignmentsByEmployee(employeeId: number): Observable<Assignment[]> {
@@ -136,6 +144,10 @@ export class AssetsApiService {
 
   createUser(payload: { username: string; password: string; role: 'ADMINISTRADOR' | 'COMPRAS' | 'INVENTARIO' | 'EMPLEADO' | 'FINANZAS'; employeeId?: number }): Observable<AdminUser> {
     return this.http.post<AdminUser>(`${this.base}/admin/users`, payload);
+  }
+
+  listUsers(): Observable<AdminUser[]> {
+    return this.http.get<AdminUser[]>(`${this.base}/admin/users`);
   }
 
   investedSummary(): Observable<InvestedSummary> {

@@ -17,7 +17,7 @@ Abrir:
 Variables opcionales:
 - `BACKEND_URL` (default `http://localhost:8080`)
 - `BACKEND_USER` (default `admin`)
-- `BACKEND_PASS` (default `admin123`)
+- `BACKEND_PASS` (obligatoria; contraseña del usuario configurado)
 
 ## Carga de estrés
 ```bash

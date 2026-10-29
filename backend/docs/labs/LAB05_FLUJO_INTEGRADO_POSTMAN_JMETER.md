@@ -14,7 +14,7 @@ Ejecutar flujo completo de alimentación y validación visual.
 - Thread Group: 100 usuarios.
 - Loop Count: 10 a 50.
 - HTTP Request: `POST /api/data/suppliers`.
-- Basic Auth Manager con `admin/admin123`.
+- Basic Auth Manager con `admin/<SEED_ADMIN_PASSWORD>`.
 
 ## Scripts de estrés (alternativa)
 ```bash

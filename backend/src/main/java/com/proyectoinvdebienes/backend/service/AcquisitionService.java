@@ -30,6 +30,8 @@ public class AcquisitionService {
     }
 
     public PurchaseInvoice createInvoice(CreatePurchaseInvoiceRequest request) {
+        DateRules.requireHistoric(request.invoiceDate(), "La fecha de factura");
+
         if (purchaseInvoiceRepository.findByInvoiceNumber(request.invoiceNumber()).isPresent()) {
             throw new BusinessException("La factura ya existe: " + request.invoiceNumber());
         }
@@ -55,7 +57,14 @@ public class AcquisitionService {
         return purchaseInvoiceRepository.save(invoice);
     }
 
+    public List<PurchaseInvoice> listInvoices() {
+        return purchaseInvoiceRepository.findAll();
+    }
+
     public Supplier createSupplier(CreateSupplierRequest request) {
+        if (supplierRepository.findByTaxId(request.taxId()).isPresent()) {
+            throw new BusinessException("Ya existe un proveedor con el NIT " + request.taxId());
+        }
         Supplier supplier = new Supplier();
         supplier.setName(request.name());
         supplier.setTaxId(request.taxId());

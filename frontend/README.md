@@ -1,29 +1,41 @@
-# Frontend Angular - Gestión de Activos y Bienes
+# Frontend Angular — Gestión de Activos
 
-## Flujo de interfaces
+SPA en Angular 20 (componentes standalone) con navegación lateral por rol.
 
-1. **Login** (`/login`) – primera pantalla obligatoria.
-2. **Menú general** (`/menu`) – hub principal para abrir módulos en pestañas nuevas.
-3. **Módulos** (cada uno en su propia ruta y pestaña):
-   - `/adquisiciones`
-   - `/inventario`
-   - `/asignaciones`
-   - `/bajas`
-   - `/reportes`
+## Pantallas
 
-Cada módulo incluye botón **"Volver al menú"**.
+| Ruta | Rol(es) | Qué hace |
+|---|---|---|
+| `/login` | todos | Ingreso con usuario y contraseña |
+| `/menu` | todos | Inicio con indicadores y accesos según el rol |
+| `/adquisiciones` | Administrador, Compras | Registro y listado de facturas de compra |
+| `/catalogos` | Administrador, Compras, Inventario | Proveedores y partidas presupuestarias |
+| `/inventario` | Administrador, Inventario | Alta de activos, búsqueda, filtro por estado y QR |
+| `/asignaciones` | Administrador, Inventario | Asignar activos y registrar devoluciones |
+| `/bajas` | Administrador, Inventario | Solicitar, aprobar y rechazar bajas |
+| `/reportes` | Administrador, Finanzas, Inventario | Reporte general, por empleado y exportación |
+| `/empleado` | Empleado, Administrador | Confirmar recepción, ver mis bienes y pedir bajas |
+| `/admin-empleados` | Administrador | Registro de empleados |
+| `/usuarios` | Administrador | Cuentas de acceso y roles |
 
-## Credenciales admin (explícitas)
+## Experiencia de usuario
 
-- **Usuario:** `admin`
-- **Contraseña:** `admin123`
+- Todas las tablas tienen barra de búsqueda (sin importar acentos ni mayúsculas) y, donde aplica, filtro por estado.
+- Los formularios usan listas desplegables en lugar de pedir IDs a mano.
+- Validación en vivo con mensajes en español debajo de cada campo:
+  - **Número de factura**: formato `SERIE-NÚMERO` (ej. `FAC-2026-0001`); solo mayúsculas, dígitos y guiones, con al menos un dígito.
+  - **Fechas**: nada antes del 01/01/2000; las fechas de factura y adquisición no pueden ser futuras; las planificadas, máximo 10 años adelante. La adquisición no puede ser anterior a su factura y la devolución no puede ser anterior a la asignación.
+  - **NIT**, teléfono, montos (máx. 2 decimales), usuario y contraseña (mín. 8 caracteres).
+- Notificaciones (toasts) de éxito/error y diálogo de confirmación para acciones irreversibles.
+- Diseño adaptable a móvil (menú lateral desplegable).
+- Montos en quetzales y fechas `dd/MM/yyyy` (locale `es-GT`).
 
-> Con `admin` se habilita en menú el formulario para crear nuevos usuarios en backend (`POST /api/admin/users`).
+Las mismas reglas se validan también en el backend, así que no se pueden saltar desde Postman.
 
 ## Seguridad
 
-- El frontend usa autenticación **HTTP Basic**.
-- El backend crea usuarios por defecto al iniciar (`admin`, `compras`, `inventario`, `finanzas`).
+- Autenticación **HTTP Basic** contra el backend.
+- La sesión se guarda en `sessionStorage` (se borra al cerrar el navegador) y si el backend responde 401 se vuelve al login.
 
 ## Desarrollo local
 
@@ -35,15 +47,8 @@ npm start
 
 `npm start` usa `proxy.conf.json` para enrutar `/api` a `http://localhost:8080`.
 
-## Despliegue en Render
+## Despliegue
 
-Este frontend está preparado para desplegarse como **Static Site** en Render:
-
-- Se genera con `npm run build`.
-- El directorio publicado es `dist/frontend/browser`.
-- `public/_redirects` incluye:
-  - Proxy de `/api/*` hacia el backend desplegado.
-  - Fallback SPA `/* -> /index.html` para evitar errores **Not Found** al recargar rutas como `/menu` o `/inventario`.
-- Si tu backend cambia de dominio, ajusta `src/index.html` en la meta `app-api-base-url`.
-
-También se incluye `render.yaml` en la raíz del repositorio para definir backend + frontend en un solo blueprint.
+Ver `render.yaml` en la raíz: el sitio estático reenvía `/api/*` al backend, por lo que la meta `app-api-base-url`
+de `src/index.html` queda vacía. Si se quisiera llamar al backend directamente, se pone su URL ahí y se agrega el
+dominio del frontend a `CORS_ALLOWED_ORIGINS` del backend.

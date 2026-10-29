@@ -10,7 +10,7 @@ Crear y consumir API REST de `suppliers`, luego cargar 1000-5000 registros.
 ## 2) Prueba previa en Postman
 - Método: `POST`
 - URL: `http://localhost:8080/api/data/suppliers`
-- Auth: Basic (`admin` / `admin123`)
+- Auth: Basic (`admin` / `<SEED_ADMIN_PASSWORD>`)
 - Body JSON:
 ```json
 {"name":"Proveedor Demo","taxId":"RFC-DEMO-X","email":"demo@proveedor.com","phone":"555-1010"}

@@ -32,6 +32,11 @@ public class InventoryService {
         PurchaseInvoice invoice = purchaseInvoiceRepository.findById(request.purchaseInvoiceId())
                 .orElseThrow(() -> new NotFoundException("Factura de adquisición no encontrada"));
 
+        DateRules.requireHistoric(request.acquisitionDate(), "La fecha de adquisición");
+        if (invoice.getInvoiceDate() != null && request.acquisitionDate().isBefore(invoice.getInvoiceDate())) {
+            throw new BusinessException("La fecha de adquisición no puede ser anterior a la fecha de la factura.");
+        }
+
         if (request.assetCode() != null && !request.assetCode().isBlank() && assetRepository.existsByAssetCode(request.assetCode())) {
             throw new BusinessException("El código de activo ya existe. Captura un valor único.");
         }

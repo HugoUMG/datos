@@ -3,8 +3,11 @@ package com.proyectoinvdebienes.backend.web.controller;
 import com.proyectoinvdebienes.backend.service.BusinessException;
 import com.proyectoinvdebienes.backend.service.NotFoundException;
 import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.validation.FieldError;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -29,7 +32,17 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleValidation(MethodArgumentNotValidException ex) {
-        return Map.of("error", "Datos inválidos en la petición");
+        String detail = ex.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .distinct()
+                .collect(Collectors.joining(". "));
+        return Map.of("error", detail.isBlank() ? "Datos inválidos en la petición" : detail);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleUnreadable(HttpMessageNotReadableException ex) {
+        return Map.of("error", "La solicitud tiene datos con formato inválido (revisa fechas, números y opciones).");
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

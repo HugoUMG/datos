@@ -4,9 +4,9 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public record CreateAssignmentRequest(
-        @NotNull Long assetId,
-        @NotNull Long employeeId,
-        @NotNull LocalDate assignedAt,
+        @NotNull(message = "Selecciona un activo") Long assetId,
+        @NotNull(message = "Selecciona un empleado") Long employeeId,
+        @NotNull(message = "La fecha de asignación es obligatoria") LocalDate assignedAt,
         LocalDate expectedReturnAt
 ) {
 }
