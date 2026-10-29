@@ -1,6 +1,7 @@
 # Despliegue completo en Render (Blueprint): base de datos, backend y frontend.
 # Render → New → Blueprint → elegir este repositorio. Las variables con "sync: false"
 # (contraseñas iniciales) se piden al crear el Blueprint y no quedan en el repositorio.
+# Ojo: no reemplazar las variables desde el dashboard con "Add from .env"; borra las DB_* que define este archivo.
 databases:
   - name: activos-db
     plan: free
