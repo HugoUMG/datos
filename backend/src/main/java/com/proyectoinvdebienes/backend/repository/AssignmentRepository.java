@@ -15,6 +15,9 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 
     List<Assignment> findByAssetId(Long assetId);
 
+    @EntityGraph(attributePaths = {"employee", "employee.department"})
+    List<Assignment> findByAssetIdOrderByIdAsc(Long assetId);
+
     @EntityGraph(attributePaths = {"asset", "employee", "employee.department"})
     List<Assignment> findByStatus(AssignmentStatus status);
 

@@ -29,6 +29,7 @@ public record CreatePurchaseInvoiceRequest(
         BigDecimal totalAmount,
         @NotNull(message = "Selecciona un proveedor") Long supplierId,
         @NotNull(message = "Selecciona una partida presupuestaria") Long budgetLineId,
-        @Size(max = 500, message = "Las notas admiten máximo 500 caracteres") String notes
+        @Size(max = 500, message = "Las notas admiten máximo 500 caracteres") @Pattern(regexp = ValidationPatterns.NO_HTML, message = "Las notas " + ValidationPatterns.NO_HTML_MESSAGE)
+        String notes
 ) {
 }

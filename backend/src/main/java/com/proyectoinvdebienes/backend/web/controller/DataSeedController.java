@@ -16,7 +16,10 @@ import com.proyectoinvdebienes.backend.web.dto.CreateSupplierRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import com.proyectoinvdebienes.backend.service.BusinessException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -79,7 +82,22 @@ public class DataSeedController {
     @PostMapping("/departments")
     @ResponseStatus(HttpStatus.CREATED)
     public Department createDepartment(@Valid @RequestBody CreateDepartmentRequest request) {
+        if (departmentRepository.findByCostCenterCode(request.costCenterCode()).isPresent()) {
+            throw new BusinessException("Ya existe un departamento con el centro de costo " + request.costCenterCode());
+        }
         Department department = new Department();
+        department.setName(request.name());
+        department.setCostCenterCode(request.costCenterCode());
+        return departmentRepository.save(department);
+    }
+
+    @PutMapping("/departments/{id}")
+    public Department updateDepartment(@PathVariable Long id, @Valid @RequestBody CreateDepartmentRequest request) {
+        Department department = departmentRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Departamento no encontrado"));
+        if (departmentRepository.existsByCostCenterCodeAndIdNot(request.costCenterCode(), id)) {
+            throw new BusinessException("Ya existe otro departamento con el centro de costo " + request.costCenterCode());
+        }
         department.setName(request.name());
         department.setCostCenterCode(request.costCenterCode());
         return departmentRepository.save(department);
@@ -97,6 +115,18 @@ public class DataSeedController {
                 .orElseThrow(() -> new NotFoundException("Departamento no encontrado"));
 
         Employee employee = new Employee();
+        employee.setFullName(request.fullName());
+        employee.setEmail(request.email());
+        employee.setDepartment(department);
+        return employeeRepository.save(employee);
+    }
+
+    @PutMapping("/employees/{id}")
+    public Employee updateEmployee(@PathVariable Long id, @Valid @RequestBody CreateEmployeeDataRequest request) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+        Department department = departmentRepository.findById(request.departmentId())
+                .orElseThrow(() -> new NotFoundException("Departamento no encontrado"));
         employee.setFullName(request.fullName());
         employee.setEmail(request.email());
         employee.setDepartment(department);

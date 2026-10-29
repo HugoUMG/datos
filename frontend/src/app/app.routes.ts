@@ -34,6 +34,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/inventario/pages/inventario.page').then((m) => m.InventarioPage)
       },
       {
+        path: 'inventario/:id',
+        title: 'Historial del activo · Gestión de Activos',
+        canActivate: [authGuard],
+        data: { roles: ['ADMINISTRADOR', 'INVENTARIO'] },
+        loadComponent: () => import('./features/inventario/pages/activo-detalle.page').then((m) => m.ActivoDetallePage)
+      },
+      {
         path: 'asignaciones',
         title: 'Asignaciones · Gestión de Activos',
         canActivate: [authGuard],

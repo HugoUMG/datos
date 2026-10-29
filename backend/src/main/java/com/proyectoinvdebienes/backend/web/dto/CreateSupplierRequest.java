@@ -7,7 +7,8 @@ import jakarta.validation.constraints.Size;
 
 public record CreateSupplierRequest(
         @NotBlank(message = "El nombre es obligatorio")
-        @Size(max = 120, message = "El nombre admite máximo 120 caracteres") String name,
+        @Size(max = 120, message = "El nombre admite máximo 120 caracteres") @Pattern(regexp = ValidationPatterns.NO_HTML, message = "El nombre " + ValidationPatterns.NO_HTML_MESSAGE)
+        String name,
         // NIT guatemalteco: dígitos más dígito verificador (0-9 o K), ej. 1234567-8 o 123456K
         @NotBlank(message = "El NIT es obligatorio")
         @Pattern(regexp = "^[0-9]{4,12}-?[0-9Kk]$", message = "El NIT no es válido (ej. 1234567-8)")

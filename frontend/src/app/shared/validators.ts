@@ -69,3 +69,8 @@ export function maxDecimals(decimals: number): ValidatorFn {
     return fraction.length > decimals ? { maxDecimals: { decimals } } : null;
   };
 }
+
+/** Serie y etiqueta de activos (igual que el backend). */
+export const SERIAL_PATTERN = /^[A-Za-z0-9._/-]+$/;
+/** Centro de costo de un departamento, ej. CC-TI. */
+export const COST_CENTER_PATTERN = /^[A-Z0-9][A-Z0-9-]{1,19}$/;

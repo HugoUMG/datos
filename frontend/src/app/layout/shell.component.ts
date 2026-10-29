@@ -1,9 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { filter } from 'rxjs';
+import { errorMessage } from '../core/http-error';
+import { AssetsApiService } from '../core/services/assets-api.service';
+import { ToastService } from '../core/services/toast.service';
 import { AuthService, ModuleName } from '../core/services/auth.service';
 import { ROLE_LABELS } from '../shared/labels';
-import { IconComponent } from '../shared/ui';
+import { FieldErrorComponent, IconComponent } from '../shared/ui';
 
 interface NavItem {
   path: string;
@@ -28,7 +32,7 @@ const NAV: NavItem[] = [
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, IconComponent, FieldErrorComponent],
   template: `
     <div class="layout" [class.open]="menuOpen()">
       <aside class="sidebar">
@@ -38,7 +42,7 @@ const NAV: NavItem[] = [
         </div>
         <nav>
           @for (item of nav(); track item.path) {
-            <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/menu' }">
               <app-icon [name]="item.icon" />
               <span>{{ item.label }}</span>
             </a>
@@ -47,6 +51,9 @@ const NAV: NavItem[] = [
         <div class="user">
           <div class="avatar">{{ initial() }}</div>
           <div class="who"><strong>{{ auth.username() }}</strong><span>{{ roleLabel() }}</span></div>
+          <button type="button" class="btn-ghost logout" (click)="openPassword()" title="Cambiar contraseña" aria-label="Cambiar contraseña">
+            <app-icon name="key" />
+          </button>
           <button type="button" class="btn-ghost logout" (click)="logout()" title="Cerrar sesión" aria-label="Cerrar sesión">
             <app-icon name="logout" />
           </button>
@@ -63,6 +70,35 @@ const NAV: NavItem[] = [
         <main class="content"><router-outlet /></main>
       </div>
     </div>
+
+    @if (changingPassword()) {
+      <div class="modal-backdrop" (click)="changingPassword.set(false)">
+        <form class="modal" [formGroup]="pwdForm" (ngSubmit)="savePassword()" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" novalidate>
+          <div><h2>Cambiar mi contraseña</h2><p class="muted small">Usa al menos 8 caracteres y no la compartas.</p></div>
+          <div class="field">
+            <label for="pw-current">Contraseña actual<span class="req">*</span></label>
+            <input id="pw-current" type="password" formControlName="currentPassword" autocomplete="current-password" maxlength="72" />
+            <app-field-error [control]="pwdForm.controls.currentPassword" />
+          </div>
+          <div class="field">
+            <label for="pw-new">Nueva contraseña<span class="req">*</span></label>
+            <input id="pw-new" type="password" formControlName="newPassword" autocomplete="new-password" maxlength="72" />
+            <app-field-error [control]="pwdForm.controls.newPassword" />
+          </div>
+          <div class="field">
+            <label for="pw-confirm">Confirmar nueva contraseña<span class="req">*</span></label>
+            <input id="pw-confirm" type="password" formControlName="confirm" autocomplete="new-password" maxlength="72" />
+            @if (pwdForm.controls.confirm.touched && pwdForm.value.confirm !== pwdForm.value.newPassword) {
+              <span class="field-error">Las contraseñas no coinciden.</span>
+            }
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="changingPassword.set(false)">Cancelar</button>
+            <button type="submit" [disabled]="savingPassword()">Guardar</button>
+          </div>
+        </form>
+      </div>
+    }
   `,
   styles: [`
     .layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
@@ -106,7 +142,18 @@ export class ShellComponent {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
+  private readonly fb = inject(FormBuilder);
+  private readonly api = inject(AssetsApiService);
+  private readonly toast = inject(ToastService);
+
   readonly menuOpen = signal(false);
+  readonly changingPassword = signal(false);
+  readonly savingPassword = signal(false);
+  readonly pwdForm = this.fb.nonNullable.group({
+    currentPassword: ['', Validators.required],
+    newPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(72)]],
+    confirm: ['', Validators.required]
+  });
   readonly nav = computed(() => {
     this.auth.role();
     return NAV.filter((item) => !item.module || this.auth.canAccessModule(item.module));
@@ -116,6 +163,33 @@ export class ShellComponent {
 
   constructor() {
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => this.menuOpen.set(false));
+  }
+
+  openPassword(): void {
+    this.pwdForm.reset();
+    this.changingPassword.set(true);
+  }
+
+  savePassword(): void {
+    const v = this.pwdForm.getRawValue();
+    if (this.pwdForm.invalid || v.newPassword !== v.confirm) {
+      this.pwdForm.markAllAsTouched();
+      return;
+    }
+    this.savingPassword.set(true);
+    this.api.changePassword({ currentPassword: v.currentPassword, newPassword: v.newPassword }).subscribe({
+      next: () => {
+        // Las siguientes peticiones ya deben autenticarse con la contraseña nueva.
+        this.auth.updateStoredPassword(v.newPassword);
+        this.toast.success('Contraseña actualizada.');
+        this.changingPassword.set(false);
+        this.savingPassword.set(false);
+      },
+      error: (err) => {
+        this.toast.error(errorMessage(err, 'No fue posible cambiar la contraseña.'));
+        this.savingPassword.set(false);
+      }
+    });
   }
 
   logout(): void {

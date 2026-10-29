@@ -1,14 +1,16 @@
+import { RestrictDirective } from '../../../shared/restrict.directive';
 import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
 import { errorMessage } from '../../../core/http-error';
+import { resolveApiUrl } from '../../../core/config/api-base-url';
 import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, FieldErrorComponent, IconComponent],
+  imports: [RestrictDirective, ReactiveFormsModule, FieldErrorComponent, IconComponent],
   template: `
     <section class="login">
       <div class="panel">
@@ -25,7 +27,7 @@ import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
         <form [formGroup]="form" (ngSubmit)="submit()" class="stack" novalidate>
           <div class="field">
             <label for="username">Usuario</label>
-            <input id="username" formControlName="username" autocomplete="username" placeholder="Tu usuario" autofocus />
+            <input id="username" appRestrict="username" formControlName="username" autocomplete="username" placeholder="Tu usuario" autofocus />
             <app-field-error [control]="form.controls.username" />
           </div>
 
@@ -49,6 +51,14 @@ import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
           <button type="submit" [disabled]="loading()">
             @if (loading()) { <span class="spinner"></span> Ingresando… } @else { Iniciar sesión }
           </button>
+          <p class="server" [class.ready]="server() === 'ready'" [class.down]="server() === 'down'" role="status">
+            <span class="dot"></span>
+            @switch (server()) {
+              @case ('ready') { Servidor listo }
+              @case ('down') { No se pudo contactar al servidor; revisa tu conexión. }
+              @default { Conectando con el servidor… (si estuvo inactivo tarda hasta un minuto) }
+            }
+          </p>
           @if (slow()) {
             <p class="hint center">El servidor estaba inactivo y está despertando; puede tardar hasta un minuto.</p>
           }
@@ -69,6 +79,11 @@ import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
     .pwd button { position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
     button[type=submit] { padding: .7rem; }
     .center { text-align: center; }
+    .server { display: flex; gap: .45rem; align-items: center; justify-content: center; font-size: .8rem; color: var(--text-muted); }
+    .server .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); animation: pulse 1.2s infinite; }
+    .server.ready .dot { background: var(--success); animation: none; }
+    .server.down .dot { background: var(--danger); animation: none; }
+    @keyframes pulse { 50% { opacity: .3; } }
   `]
 })
 export class LoginPage {
@@ -82,6 +97,8 @@ export class LoginPage {
   readonly loading = signal(false);
   readonly slow = signal(false);
   readonly showPassword = signal(false);
+  /** El backend gratuito se duerme; se "despierta" en cuanto se abre el login. */
+  readonly server = signal<'checking' | 'ready' | 'down'>('checking');
 
   readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],
@@ -89,7 +106,18 @@ export class LoginPage {
   });
 
   constructor() {
+    this.wakeServer();
     if (this.auth.isLoggedIn()) this.router.navigateByUrl('/menu');
+  }
+
+  private wakeServer(attempt = 1): void {
+    // Cualquier respuesta HTTP (incluso 401 sin credenciales) significa que el servidor ya responde.
+    fetch(resolveApiUrl('/api/auth/me'), { method: 'GET' })
+      .then((res) => this.server.set(res.status === 502 || res.status === 503 ? 'checking' : 'ready'))
+      .then(() => {
+        if (this.server() === 'checking' && attempt < 12) setTimeout(() => this.wakeServer(attempt + 1), 5000);
+      })
+      .catch(() => (attempt < 12 ? setTimeout(() => this.wakeServer(attempt + 1), 5000) : this.server.set('down')));
   }
 
   submit(): void {

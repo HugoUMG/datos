@@ -1,4 +1,5 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { RestrictDirective } from '../../../shared/restrict.directive';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -6,13 +7,13 @@ import { BudgetLine, PurchaseInvoice, Supplier } from '../../../core/models/api.
 import { AssetsApiService } from '../../../core/services/assets-api.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { errorMessage } from '../../../core/http-error';
-import { SearchPipe } from '../../../shared/search.pipe';
+import { PagerComponent, SortHeaderComponent, TableCtl, exportCsv } from '../../../shared/table';
 import { FieldErrorComponent, IconComponent, SearchBoxComponent } from '../../../shared/ui';
 import { MIN_DATE, dateRange, invoiceNumber, maxDecimals, todayIso } from '../../../shared/validators';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, CurrencyPipe, DatePipe, SearchPipe, FieldErrorComponent, IconComponent, SearchBoxComponent],
+  imports: [RestrictDirective, ReactiveFormsModule, RouterLink, CurrencyPipe, DatePipe, FieldErrorComponent, IconComponent, SearchBoxComponent, SortHeaderComponent, PagerComponent],
   template: `
     <section class="page">
       <div class="page-header">
@@ -35,7 +36,7 @@ import { MIN_DATE, dateRange, invoiceNumber, maxDecimals, todayIso } from '../..
         <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid" novalidate>
           <div class="field">
             <label for="inv-number">Número de factura<span class="req">*</span></label>
-            <input id="inv-number" formControlName="invoiceNumber" placeholder="FAC-2026-0001" maxlength="30"
+            <input id="inv-number" appRestrict="code" formControlName="invoiceNumber" placeholder="FAC-2026-0001" maxlength="30"
               (input)="upperCase()" autocomplete="off" />
             <span class="hint">Serie y número: mayúsculas, dígitos y guiones.</span>
             <app-field-error [control]="form.controls.invoiceNumber" />
@@ -47,7 +48,7 @@ import { MIN_DATE, dateRange, invoiceNumber, maxDecimals, todayIso } from '../..
           </div>
           <div class="field">
             <label for="inv-total">Total (Q)<span class="req">*</span></label>
-            <input id="inv-total" type="number" inputmode="decimal" formControlName="totalAmount" placeholder="0.00" min="0.01" step="0.01" />
+            <input id="inv-total" appRestrict="money" type="number" inputmode="decimal" formControlName="totalAmount" placeholder="0.00" min="0.01" step="0.01" />
             <app-field-error [control]="form.controls.totalAmount" />
           </div>
           <div class="field">
@@ -68,7 +69,7 @@ import { MIN_DATE, dateRange, invoiceNumber, maxDecimals, todayIso } from '../..
           </div>
           <div class="field span-all">
             <label for="inv-notes">Notas</label>
-            <textarea id="inv-notes" formControlName="notes" rows="2" maxlength="500" placeholder="Opcional"></textarea>
+            <textarea id="inv-notes" appRestrict="text" formControlName="notes" rows="2" maxlength="500" placeholder="Opcional"></textarea>
           </div>
           <div class="form-actions">
             <button type="button" class="btn-secondary" (click)="reset()">Limpiar</button>
@@ -84,16 +85,24 @@ import { MIN_DATE, dateRange, invoiceNumber, maxDecimals, todayIso } from '../..
           <div><h2>Facturas registradas</h2></div>
           <button type="button" class="btn-secondary btn-sm" (click)="load()"><app-icon name="refresh" [size]="14" /> Actualizar</button>
         </div>
-        @let rows = invoices() | search: term();
+        @let v = t.view(invoices());
         <div class="toolbar">
-          <app-search-box [(value)]="term" placeholder="Buscar por número, proveedor, partida…" />
-          <span class="count">{{ rows.length }} de {{ invoices().length }}</span>
+          <app-search-box [value]="t.term()" (valueChange)="t.setTerm($event)" placeholder="Buscar por número, proveedor, partida…" />
+          <span class="count">{{ v.filtered.length }} de {{ v.total }}</span>
+          <button type="button" class="btn-secondary btn-sm" (click)="exportar(v.filtered)" [disabled]="!v.filtered.length"><app-icon name="download" [size]="14" /> CSV</button>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Número</th><th>Fecha</th><th>Proveedor</th><th>Partida</th><th class="right">Total</th><th>Notas</th></tr></thead>
+            <thead><tr>
+              <th appSort="invoiceNumber" [ctl]="t">Número</th>
+              <th appSort="invoiceDate" [ctl]="t">Fecha</th>
+              <th appSort="supplier.name" [ctl]="t">Proveedor</th>
+              <th appSort="budgetLine.code" [ctl]="t">Partida</th>
+              <th appSort="totalAmount" [ctl]="t" class="right">Total</th>
+              <th>Notas</th>
+            </tr></thead>
             <tbody>
-              @for (inv of rows; track inv.id) {
+              @for (inv of v.items; track inv.id) {
                 <tr>
                   <td class="mono nowrap">{{ inv.invoiceNumber }}</td>
                   <td class="nowrap">{{ inv.invoiceDate | date: 'dd/MM/yyyy' }}</td>
@@ -105,13 +114,14 @@ import { MIN_DATE, dateRange, invoiceNumber, maxDecimals, todayIso } from '../..
               } @empty {
                 <tr><td colspan="6" class="empty">
                   @if (loading()) { <span class="spinner"></span> Cargando… }
-                  @else if (term()) { <strong>Sin resultados</strong>Prueba con otro término de búsqueda. }
+                  @else if (t.term()) { <strong>Sin resultados</strong>Prueba con otro término de búsqueda. }
                   @else { <strong>Aún no hay facturas</strong>Registra la primera con el formulario de arriba. }
                 </td></tr>
               }
             </tbody>
           </table>
         </div>
+        <app-pager [ctl]="t" [view]="v" />
       </div>
     </section>
   `
@@ -131,7 +141,7 @@ export class AdquisicionesPage implements OnInit {
   readonly loading = signal(true);
   readonly loadingCatalogs = signal(true);
   readonly saving = signal(false);
-  readonly term = signal('');
+  readonly t = new TableCtl<PurchaseInvoice>();
 
   readonly form = this.fb.group({
     invoiceNumber: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(30), invoiceNumber()]],
@@ -155,6 +165,18 @@ export class AdquisicionesPage implements OnInit {
       error: (err) => this.toast.error(errorMessage(err, 'No se pudieron cargar las facturas.')),
       complete: () => this.loading.set(false)
     });
+  }
+
+  exportar(rows: PurchaseInvoice[]): void {
+    exportCsv('facturas.csv', [
+      { label: 'Número', value: (r) => r.invoiceNumber },
+      { label: 'Fecha', value: (r) => r.invoiceDate },
+      { label: 'Proveedor', value: (r) => r.supplier?.name },
+      { label: 'NIT', value: (r) => r.supplier?.taxId },
+      { label: 'Partida', value: (r) => r.budgetLine?.code },
+      { label: 'Total', value: (r) => r.totalAmount },
+      { label: 'Notas', value: (r) => r.notes }
+    ], rows);
   }
 
   upperCase(): void {

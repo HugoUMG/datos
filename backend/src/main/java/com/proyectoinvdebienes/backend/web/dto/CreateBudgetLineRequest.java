@@ -15,7 +15,8 @@ public record CreateBudgetLineRequest(
                 message = "El código solo admite mayúsculas, dígitos, puntos y guiones (ej. PP-2026-01)")
         String code,
         @NotBlank(message = "La descripción es obligatoria")
-        @Size(max = 200, message = "La descripción admite máximo 200 caracteres") String description,
+        @Size(max = 200, message = "La descripción admite máximo 200 caracteres") @Pattern(regexp = ValidationPatterns.NO_HTML, message = "La descripción " + ValidationPatterns.NO_HTML_MESSAGE)
+        String description,
         @NotNull(message = "El monto asignado es obligatorio")
         @DecimalMin(value = "0.01", message = "El monto asignado debe ser mayor a 0")
         @DecimalMax(value = "999999999.99", message = "El monto asignado excede el máximo permitido")

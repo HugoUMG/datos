@@ -1,16 +1,17 @@
 import { DatePipe } from '@angular/common';
+import { RestrictDirective } from '../../../shared/restrict.directive';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Assignment } from '../../../core/models/api.models';
 import { AssetsApiService } from '../../../core/services/assets-api.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { downloadBlob, errorMessage } from '../../../core/http-error';
-import { SearchPipe } from '../../../shared/search.pipe';
+import { PagerComponent, SortHeaderComponent, TableCtl, exportCsv } from '../../../shared/table';
 import { FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComponent } from '../../../shared/ui';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, FormsModule, DatePipe, SearchPipe, FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComponent],
+  imports: [RestrictDirective, ReactiveFormsModule, FormsModule, DatePipe, SortHeaderComponent, PagerComponent, FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComponent],
   template: `
     <section class="page">
       <div class="page-header">
@@ -47,32 +48,39 @@ import { FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComp
           <h2>Bienes a mi cargo</h2>
           <button type="button" class="btn-secondary btn-sm" (click)="load()"><app-icon name="refresh" [size]="14" /> Actualizar</button>
         </div>
-        @let rows = assignments() | search: term();
+        @let v = t.view(assignments());
         @if (assignments().length > 5) {
           <div class="toolbar">
-            <app-search-box [(value)]="term" placeholder="Buscar por código, nombre o ubicación…" />
-            <span class="count">{{ rows.length }} de {{ assignments().length }}</span>
+            <app-search-box [value]="t.term()" (valueChange)="t.setTerm($event)" placeholder="Buscar por código, nombre o ubicación…" />
+            <span class="count">{{ v.filtered.length }} de {{ v.total }}</span>
+            <button type="button" class="btn-secondary btn-sm" (click)="exportar(v.filtered)"><app-icon name="download" [size]="14" /> CSV</button>
           </div>
         }
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Código</th><th>Nombre</th><th>Ubicación</th><th>Estado</th><th>Asignado</th><th></th></tr></thead>
+            <thead><tr>
+              <th appSort="asset.assetCode" [ctl]="t">Código</th><th appSort="asset.name" [ctl]="t">Nombre</th>
+              <th appSort="asset.location" [ctl]="t">Ubicación</th><th>Estado</th><th appSort="assignedAt" [ctl]="t">Asignado</th>
+              <th appSort="expectedReturnAt" [ctl]="t">Devolver antes de</th><th></th>
+            </tr></thead>
             <tbody>
-              @for (item of rows; track item.id) {
+              @for (item of v.items; track item.id) {
                 <tr>
                   <td class="mono">{{ item.asset.assetCode }}</td><td>{{ item.asset.name }}</td><td>{{ item.asset.location }}</td>
                   <td><app-status-badge [status]="item.asset.status" /></td>
                   <td class="nowrap">{{ item.assignedAt | date: 'dd/MM/yyyy' }}</td>
+                  <td class="nowrap">{{ (item.expectedReturnAt | date: 'dd/MM/yyyy') || 'Sin fecha' }}</td>
                   <td><a class="btn btn-ghost btn-sm" [href]="api.employeeAssetQr(item.asset.id)" target="_blank"><app-icon name="qr" [size]="15" /> QR</a></td>
                 </tr>
               } @empty {
-                <tr><td colspan="6" class="empty">
-                  @if (loading()) { <span class="spinner"></span> Cargando… } @else { <strong>No tienes bienes a tu cargo</strong> }
+                <tr><td colspan="7" class="empty">
+                  @if (loading()) { <span class="spinner"></span> Cargando… } @else { <strong>No tienes bienes a tu cargo</strong>Cuando te asignen uno aparecerá aquí después de confirmarlo. }
                 </td></tr>
               }
             </tbody>
           </table>
         </div>
+        <app-pager [ctl]="t" [view]="v" />
       </div>
 
       @if (assignments().length) {
@@ -89,7 +97,7 @@ import { FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComp
             </div>
             <div class="field">
               <label for="e-reason">Motivo<span class="req">*</span></label>
-              <input id="e-reason" formControlName="reason" placeholder="Daño, extravío, fin de vida útil…" maxlength="300" />
+              <input id="e-reason" appRestrict="text" formControlName="reason" placeholder="Daño, extravío, fin de vida útil…" maxlength="300" />
               <app-field-error [control]="disposalForm.controls.reason" />
             </div>
             <div class="form-actions"><button type="submit">Enviar solicitud</button></div>
@@ -115,7 +123,7 @@ export class EmpleadoPage implements OnInit {
   readonly assignments = signal<Assignment[]>([]);
   readonly pendingAssignments = signal<Assignment[]>([]);
   readonly loading = signal(true);
-  readonly term = signal('');
+  readonly t = new TableCtl<Assignment>();
   termsAccepted: Record<number, boolean> = {};
 
   readonly disposalForm = this.fb.group({
@@ -161,6 +169,16 @@ export class EmpleadoPage implements OnInit {
       },
       error: (err) => this.toast.error(errorMessage(err, 'No fue posible solicitar la baja.'))
     });
+  }
+
+  exportar(rows: Assignment[]): void {
+    exportCsv('mis-activos.csv', [
+      { label: 'Código', value: (r) => r.asset.assetCode },
+      { label: 'Nombre', value: (r) => r.asset.name },
+      { label: 'Ubicación', value: (r) => r.asset.location },
+      { label: 'Asignado', value: (r) => r.assignedAt },
+      { label: 'Devolver antes de', value: (r) => r.expectedReturnAt }
+    ], rows);
   }
 
   downloadMyReport(): void {

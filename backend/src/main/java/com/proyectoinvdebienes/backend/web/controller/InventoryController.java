@@ -8,7 +8,10 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import com.proyectoinvdebienes.backend.service.AssetHistory;
+import com.proyectoinvdebienes.backend.web.dto.UpdateAssetRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +33,16 @@ public class InventoryController {
     @ResponseStatus(HttpStatus.CREATED)
     public Asset createAsset(@Valid @RequestBody CreateAssetRequest request) {
         return inventoryService.registerAsset(request);
+    }
+
+    @PutMapping("/assets/{assetId}")
+    public Asset updateAsset(@PathVariable Long assetId, @Valid @RequestBody UpdateAssetRequest request) {
+        return inventoryService.updateAsset(assetId, request);
+    }
+
+    @GetMapping("/assets/{assetId}/history")
+    public AssetHistory assetHistory(@PathVariable Long assetId) {
+        return inventoryService.assetHistory(assetId);
     }
 
     @GetMapping("/assets")

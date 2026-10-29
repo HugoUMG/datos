@@ -65,6 +65,12 @@ export class AuthService {
     ['inv_user', 'inv_pass', 'inv_role', 'inv_employee_id'].forEach((key) => store.removeItem(key));
   }
 
+  /** Tras cambiar la contraseña, las siguientes peticiones deben usar la nueva. */
+  updateStoredPassword(password: string): void {
+    this.passwordState.set(password);
+    store.setItem('inv_pass', password);
+  }
+
   basicToken(): string {
     return btoa(`${this.usernameState()}:${this.passwordState()}`);
   }

@@ -91,3 +91,10 @@ export interface AdminUser {
   employeeId?: number;
   createdAt: string;
 }
+
+export interface AssetHistory {
+  asset: Asset;
+  invoice?: PurchaseInvoice;
+  assignments: Assignment[];
+  disposals: Disposal[];
+}

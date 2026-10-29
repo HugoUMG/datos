@@ -74,12 +74,43 @@ public class AcquisitionService {
         return supplierRepository.save(supplier);
     }
 
+    public Supplier updateSupplier(Long id, CreateSupplierRequest request) {
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
+        supplierRepository.findByTaxId(request.taxId())
+                .filter(other -> !other.getId().equals(id))
+                .ifPresent(other -> {
+                    throw new BusinessException("Ya existe otro proveedor con el NIT " + request.taxId());
+                });
+        supplier.setName(request.name());
+        supplier.setTaxId(request.taxId());
+        supplier.setEmail(request.email());
+        supplier.setPhone(request.phone());
+        return supplierRepository.save(supplier);
+    }
+
+    public Supplier setSupplierActive(Long id, boolean active) {
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
+        supplier.setActive(active);
+        return supplierRepository.save(supplier);
+    }
+
     public List<Supplier> listSuppliers() {
         return supplierRepository.findAll();
     }
 
     public BudgetLine createBudgetLine(CreateBudgetLineRequest request) {
         BudgetLine budgetLine = new BudgetLine();
+        budgetLine.setCode(request.code());
+        budgetLine.setDescription(request.description());
+        budgetLine.setAllocatedAmount(request.allocatedAmount());
+        return budgetLineRepository.save(budgetLine);
+    }
+
+    public BudgetLine updateBudgetLine(Long id, CreateBudgetLineRequest request) {
+        BudgetLine budgetLine = budgetLineRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Partida presupuestaria no encontrada"));
         budgetLine.setCode(request.code());
         budgetLine.setDescription(request.description());
         budgetLine.setAllocatedAmount(request.allocatedAmount());

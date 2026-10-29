@@ -9,5 +9,7 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
     boolean existsByAssetCode(String assetCode);
     boolean existsBySerialNumber(String serialNumber);
     boolean existsByTagValue(String tagValue);
+    boolean existsBySerialNumberAndIdNot(String serialNumber, Long id);
+    boolean existsByTagValueAndIdNot(String tagValue, Long id);
     long countByCurrentCustodianId(Long employeeId);
 }

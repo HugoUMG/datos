@@ -10,7 +10,11 @@ import com.proyectoinvdebienes.backend.web.dto.CreateSupplierRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import com.proyectoinvdebienes.backend.web.dto.SetActiveRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +48,16 @@ public class AcquisitionController {
         return acquisitionService.createSupplier(request);
     }
 
+    @PutMapping("/suppliers/{id}")
+    public Supplier updateSupplier(@PathVariable Long id, @Valid @RequestBody CreateSupplierRequest request) {
+        return acquisitionService.updateSupplier(id, request);
+    }
+
+    @PatchMapping("/suppliers/{id}/active")
+    public Supplier setSupplierActive(@PathVariable Long id, @Valid @RequestBody SetActiveRequest request) {
+        return acquisitionService.setSupplierActive(id, request.active());
+    }
+
     @GetMapping("/suppliers")
     public List<Supplier> listSuppliers() {
         return acquisitionService.listSuppliers();
@@ -53,6 +67,11 @@ public class AcquisitionController {
     @ResponseStatus(HttpStatus.CREATED)
     public BudgetLine createBudgetLine(@Valid @RequestBody CreateBudgetLineRequest request) {
         return acquisitionService.createBudgetLine(request);
+    }
+
+    @PutMapping("/budget-lines/{id}")
+    public BudgetLine updateBudgetLine(@PathVariable Long id, @Valid @RequestBody CreateBudgetLineRequest request) {
+        return acquisitionService.updateBudgetLine(id, request);
     }
 
     @GetMapping("/budget-lines")

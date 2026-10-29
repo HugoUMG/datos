@@ -1,4 +1,5 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { RestrictDirective } from '../../../shared/restrict.directive';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Asset, Disposal } from '../../../core/models/api.models';
@@ -7,13 +8,14 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { errorMessage } from '../../../core/http-error';
-import { SearchPipe } from '../../../shared/search.pipe';
+import { PagerComponent, SortHeaderComponent, TableCtl, exportCsv } from '../../../shared/table';
+import { RouterLink } from '@angular/router';
 import { FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComponent } from '../../../shared/ui';
 import { maxDecimals } from '../../../shared/validators';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe, SearchPipe, FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComponent],
+  imports: [RestrictDirective, ReactiveFormsModule, CurrencyPipe, DatePipe, RouterLink, SortHeaderComponent, PagerComponent, FieldErrorComponent, IconComponent, SearchBoxComponent, StatusBadgeComponent],
   template: `
     <section class="page">
       <div class="page-header">
@@ -36,12 +38,12 @@ import { maxDecimals } from '../../../shared/validators';
           </div>
           <div class="field">
             <label for="d-reason">Motivo<span class="req">*</span></label>
-            <input id="d-reason" formControlName="reason" placeholder="Fin de vida útil, daño irreparable…" maxlength="300" />
+            <input id="d-reason" appRestrict="text" formControlName="reason" placeholder="Fin de vida útil, daño irreparable…" maxlength="300" />
             <app-field-error [control]="requestForm.controls.reason" />
           </div>
           <div class="field">
             <label for="d-by">Solicitado por<span class="req">*</span></label>
-            <input id="d-by" formControlName="requestedBy" maxlength="80" />
+            <input id="d-by" appRestrict="text" formControlName="requestedBy" maxlength="80" />
             <app-field-error [control]="requestForm.controls.requestedBy" />
           </div>
           <div class="form-actions">
@@ -55,18 +57,22 @@ import { maxDecimals } from '../../../shared/validators';
           <h2>Solicitudes pendientes</h2>
           <button type="button" class="btn-secondary btn-sm" (click)="loadPending()"><app-icon name="refresh" [size]="14" /> Actualizar</button>
         </div>
-        @let rows = pending() | search: term();
+        @let v = t.view(pending());
         <div class="toolbar">
-          <app-search-box [(value)]="term" placeholder="Buscar por activo, motivo o solicitante…" />
-          <span class="count">{{ rows.length }} de {{ pending().length }}</span>
+          <app-search-box [value]="t.term()" (valueChange)="t.setTerm($event)" placeholder="Buscar por activo, motivo o solicitante…" />
+          <span class="count">{{ v.filtered.length }} de {{ v.total }}</span>
+          <button type="button" class="btn-secondary btn-sm" (click)="exportar(v.filtered)" [disabled]="!v.filtered.length"><app-icon name="download" [size]="14" /> CSV</button>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Activo</th><th>Motivo</th><th>Solicitado por</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+            <thead><tr>
+              <th appSort="asset.assetCode" [ctl]="t">Activo</th><th appSort="reason" [ctl]="t">Motivo</th>
+              <th appSort="requestedBy" [ctl]="t">Solicitado por</th><th appSort="requestedAt" [ctl]="t">Fecha</th><th>Estado</th><th></th>
+            </tr></thead>
             <tbody>
-              @for (d of rows; track d.id) {
+              @for (d of v.items; track d.id) {
                 <tr>
-                  <td><span class="mono">{{ d.asset.assetCode }}</span><br /><span class="small muted">{{ d.asset.name }}</span></td>
+                  <td><a class="link-btn" [routerLink]="['/inventario', d.asset.id]">{{ d.asset.name }}</a><br /><span class="small muted mono">{{ d.asset.assetCode }}</span></td>
                   <td>{{ d.reason }}</td>
                   <td>{{ d.requestedBy }}</td>
                   <td class="nowrap">{{ d.requestedAt | date: 'dd/MM/yyyy' }}</td>
@@ -81,13 +87,14 @@ import { maxDecimals } from '../../../shared/validators';
               } @empty {
                 <tr><td colspan="6" class="empty">
                   @if (loading()) { <span class="spinner"></span> Cargando… }
-                  @else if (term()) { <strong>Sin resultados</strong> }
+                  @else if (t.term()) { <strong>Sin resultados</strong> }
                   @else { <strong>No hay solicitudes pendientes</strong>Todo al día. }
                 </td></tr>
               }
             </tbody>
           </table>
         </div>
+        <app-pager [ctl]="t" [view]="v" />
       </div>
 
       @if (approving(); as d) {
@@ -99,12 +106,12 @@ import { maxDecimals } from '../../../shared/validators';
             </div>
             <div class="field">
               <label for="ap-by">Aprobado por<span class="req">*</span></label>
-              <input id="ap-by" formControlName="approvedBy" maxlength="80" />
+              <input id="ap-by" appRestrict="text" formControlName="approvedBy" maxlength="80" />
               <app-field-error [control]="approveForm.controls.approvedBy" />
             </div>
             <div class="field">
               <label for="ap-val">Valor final (Q)<span class="req">*</span></label>
-              <input id="ap-val" type="number" inputmode="decimal" formControlName="finalValue" min="0" step="0.01" placeholder="0.00" />
+              <input id="ap-val" appRestrict="money" type="number" inputmode="decimal" formControlName="finalValue" min="0" step="0.01" placeholder="0.00" />
               <span class="hint">Valor de rescate o venta; 0 si se desecha.</span>
               <app-field-error [control]="approveForm.controls.finalValue" />
             </div>
@@ -130,7 +137,7 @@ export class BajasPage implements OnInit {
   readonly assets = signal<Asset[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
-  readonly term = signal('');
+  readonly t = new TableCtl<Disposal>();
   readonly approving = signal<Disposal | null>(null);
 
   /** No se puede pedir baja de algo ya dado de baja ni con una solicitud abierta. */
@@ -183,6 +190,16 @@ export class BajasPage implements OnInit {
         this.saving.set(false);
       }
     });
+  }
+
+  exportar(rows: Disposal[]): void {
+    exportCsv('bajas-pendientes.csv', [
+      { label: 'Código', value: (r) => r.asset.assetCode },
+      { label: 'Activo', value: (r) => r.asset.name },
+      { label: 'Motivo', value: (r) => r.reason },
+      { label: 'Solicitado por', value: (r) => r.requestedBy },
+      { label: 'Fecha', value: (r) => r.requestedAt }
+    ], rows);
   }
 
   openApprove(d: Disposal): void {

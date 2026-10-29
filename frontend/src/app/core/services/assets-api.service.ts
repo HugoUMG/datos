@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { resolveApiUrl } from '../config/api-base-url';
-import { AdminUser, Asset, Assignment, BudgetLine, Department, Disposal, Employee, InvestedSummary, PurchaseInvoice, Supplier } from '../models/api.models';
+import { AdminUser, Asset, AssetHistory, Assignment, BudgetLine, Department, Disposal, Employee, InvestedSummary, PurchaseInvoice, Supplier } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
 export class AssetsApiService {
@@ -172,5 +172,56 @@ export class AssetsApiService {
 
   exportMyAssetsPdf(): Observable<Blob> {
     return this.http.get(`${this.base}/reports/employee/me/export`, { responseType: 'blob' });
+  }
+
+  updateSupplier(id: number, payload: { name: string; taxId: string; email: string; phone?: string }): Observable<Supplier> {
+    return this.http.put<Supplier>(`${this.base}/acquisitions/suppliers/${id}`, payload);
+  }
+
+  setSupplierActive(id: number, active: boolean): Observable<Supplier> {
+    return this.http.patch<Supplier>(`${this.base}/acquisitions/suppliers/${id}/active`, { active });
+  }
+
+  updateBudgetLine(id: number, payload: { code: string; description: string; allocatedAmount: number }): Observable<BudgetLine> {
+    return this.http.put<BudgetLine>(`${this.base}/acquisitions/budget-lines/${id}`, payload);
+  }
+
+  updateAsset(id: number, payload: {
+    name: string;
+    description?: string;
+    serialNumber: string;
+    tagType: 'QR' | 'RFID';
+    tagValue: string;
+    location?: string;
+  }): Observable<Asset> {
+    return this.http.put<Asset>(`${this.base}/inventory/assets/${id}`, payload);
+  }
+
+  assetHistory(id: number): Observable<AssetHistory> {
+    return this.http.get<AssetHistory>(`${this.base}/inventory/assets/${id}/history`);
+  }
+
+  createDepartment(payload: { name: string; costCenterCode: string }): Observable<Department> {
+    return this.http.post<Department>(`${this.base}/data/departments`, payload);
+  }
+
+  updateDepartment(id: number, payload: { name: string; costCenterCode: string }): Observable<Department> {
+    return this.http.put<Department>(`${this.base}/data/departments/${id}`, payload);
+  }
+
+  updateEmployee(id: number, payload: { fullName: string; email: string; departmentId: number }): Observable<Employee> {
+    return this.http.put<Employee>(`${this.base}/data/employees/${id}`, payload);
+  }
+
+  changePassword(payload: { currentPassword: string; newPassword: string }): Observable<void> {
+    return this.http.post<void>(`${this.base}/auth/change-password`, payload);
+  }
+
+  resetPassword(userId: number, newPassword: string): Observable<AdminUser> {
+    return this.http.post<AdminUser>(`${this.base}/admin/users/${userId}/reset-password`, { newPassword });
+  }
+
+  downloadBackup(): Observable<Blob> {
+    return this.http.get(`${this.base}/admin/backup`, { responseType: 'blob' });
   }
 }

@@ -9,6 +9,10 @@ import com.proyectoinvdebienes.backend.domain.enums.AssetStatus;
 import com.proyectoinvdebienes.backend.domain.model.Asset;
 import com.proyectoinvdebienes.backend.domain.model.PurchaseInvoice;
 import com.proyectoinvdebienes.backend.repository.AssetRepository;
+import com.proyectoinvdebienes.backend.repository.AssignmentRepository;
+import com.proyectoinvdebienes.backend.repository.DisposalRepository;
+import com.proyectoinvdebienes.backend.web.dto.UpdateAssetRequest;
+import org.springframework.transaction.annotation.Transactional;
 import com.proyectoinvdebienes.backend.repository.PurchaseInvoiceRepository;
 import com.proyectoinvdebienes.backend.web.dto.CreateAssetRequest;
 import java.io.ByteArrayOutputStream;
@@ -22,10 +26,19 @@ public class InventoryService {
 
     private final AssetRepository assetRepository;
     private final PurchaseInvoiceRepository purchaseInvoiceRepository;
+    private final AssignmentRepository assignmentRepository;
+    private final DisposalRepository disposalRepository;
 
-    public InventoryService(AssetRepository assetRepository, PurchaseInvoiceRepository purchaseInvoiceRepository) {
+    public InventoryService(
+            AssetRepository assetRepository,
+            PurchaseInvoiceRepository purchaseInvoiceRepository,
+            AssignmentRepository assignmentRepository,
+            DisposalRepository disposalRepository
+    ) {
         this.assetRepository = assetRepository;
         this.purchaseInvoiceRepository = purchaseInvoiceRepository;
+        this.assignmentRepository = assignmentRepository;
+        this.disposalRepository = disposalRepository;
     }
 
     public Asset registerAsset(CreateAssetRequest request) {
@@ -61,6 +74,40 @@ public class InventoryService {
         asset.setPurchaseInvoice(invoice);
 
         return assetRepository.save(asset);
+    }
+
+    @Transactional
+    public Asset updateAsset(Long assetId, UpdateAssetRequest request) {
+        Asset asset = findAssetById(assetId);
+        if (asset.getStatus() == AssetStatus.DADO_DE_BAJA) {
+            throw new BusinessException("Un activo dado de baja ya no puede modificarse.");
+        }
+        if (assetRepository.existsBySerialNumberAndIdNot(request.serialNumber(), assetId)) {
+            throw new BusinessException("El número de serie ya existe en otro activo.");
+        }
+        if (assetRepository.existsByTagValueAndIdNot(request.tagValue(), assetId)) {
+            throw new BusinessException("La etiqueta ya existe en otro activo.");
+        }
+        asset.setName(request.name());
+        asset.setDescription(request.description());
+        asset.setSerialNumber(request.serialNumber());
+        asset.setTagType(request.tagType());
+        asset.setTagValue(request.tagValue());
+        if (request.location() != null && !request.location().isBlank()) {
+            asset.setLocation(request.location());
+        }
+        return assetRepository.save(asset);
+    }
+
+    @Transactional(readOnly = true)
+    public AssetHistory assetHistory(Long assetId) {
+        Asset asset = findAssetById(assetId);
+        return new AssetHistory(
+                asset,
+                asset.getPurchaseInvoice(),
+                assignmentRepository.findByAssetIdOrderByIdAsc(assetId),
+                disposalRepository.findByAssetIdOrderByIdAsc(assetId)
+        );
     }
 
     public List<Asset> listAssets() {

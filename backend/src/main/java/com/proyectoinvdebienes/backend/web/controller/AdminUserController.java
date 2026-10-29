@@ -7,7 +7,9 @@ import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import com.proyectoinvdebienes.backend.web.dto.ResetPasswordRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +31,11 @@ public class AdminUserController {
     public UserSummary createUser(@Valid @RequestBody CreateUserRequest request) {
         UserAccount created = userAccountService.createUser(request);
         return UserSummary.from(created);
+    }
+
+    @PostMapping("/{id}/reset-password")
+    public UserSummary resetPassword(@PathVariable Long id, @Valid @RequestBody ResetPasswordRequest request) {
+        return UserSummary.from(userAccountService.resetPassword(id, request.newPassword()));
     }
 
     @GetMapping

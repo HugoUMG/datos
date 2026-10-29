@@ -14,4 +14,6 @@ public interface DisposalRepository extends JpaRepository<Disposal, Long> {
     @Override
     @EntityGraph(attributePaths = {"asset"})
     Optional<Disposal> findById(Long id);
+
+    List<Disposal> findByAssetIdOrderByIdAsc(Long assetId);
 }

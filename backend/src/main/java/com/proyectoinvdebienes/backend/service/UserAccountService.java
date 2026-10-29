@@ -51,6 +51,28 @@ public class UserAccountService {
                 .orElseThrow(() -> new NotFoundException("Empleado no encontrado para la cuenta de usuario"));
     }
 
+    /** El propio usuario cambia su contraseña confirmando la actual. */
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        UserAccount account = userAccountRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        if (!passwordEncoder.matches(currentPassword, account.getPassword())) {
+            throw new BusinessException("La contraseña actual no es correcta.");
+        }
+        if (currentPassword.equals(newPassword)) {
+            throw new BusinessException("La nueva contraseña debe ser distinta de la actual.");
+        }
+        account.setPassword(passwordEncoder.encode(newPassword));
+        userAccountRepository.save(account);
+    }
+
+    /** El administrador asigna una contraseña nueva a otra cuenta (p. ej. si la olvidó). */
+    public UserAccount resetPassword(Long userId, String newPassword) {
+        UserAccount account = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        account.setPassword(passwordEncoder.encode(newPassword));
+        return userAccountRepository.save(account);
+    }
+
     public List<UserAccount> listUsers() {
         return userAccountRepository.findAll();
     }
