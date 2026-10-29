@@ -1,0 +1,16 @@
+# Mantiene despierto el backend del plan gratuito de Render (riesgo R03 del SGC):
+# Render lo suspende tras 15 minutos sin tráfico y la primera petición tarda ~1 minuto.
+# GitHub solo ejecuta tareas programadas desde la rama principal.
+name: Mantener backend activo
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping al backend
+        run: curl -sS -o /dev/null -w "HTTP %{http_code} en %{time_total}s\n" --max-time 120 https://activos-backend-y6j4.onrender.com/ || true
