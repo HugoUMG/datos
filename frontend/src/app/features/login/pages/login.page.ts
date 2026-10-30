@@ -1,12 +1,17 @@
 import { RestrictDirective } from '../../../shared/restrict.directive';
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { retry, throwError, timeout, timer } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { errorMessage } from '../../../core/http-error';
 import { resolveApiUrl } from '../../../core/config/api-base-url';
 import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
+
+/** Render suspende el backend gratuito tras 15 min sin uso y tarda 1–2 min en volver. */
+const WAKE_LIMIT_MS = 4 * 60_000;
+const WAKE_ATTEMPT_MS = 45_000;
 
 @Component({
   standalone: true,
@@ -22,6 +27,25 @@ import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
 
         @if (expirada()) {
           <div class="alert alert-warning">Tu sesión terminó. Vuelve a ingresar.</div>
+        }
+
+        @if (server() !== 'ready') {
+          <div class="wake" [class.down]="server() === 'down'" role="status" aria-live="polite">
+            @if (server() === 'down') {
+              <div>
+                <strong>El servidor no respondió</strong>
+                <p class="small">Puede ser tu conexión o que el servicio esté reiniciando.</p>
+              </div>
+              <button type="button" class="btn-secondary btn-sm" (click)="startWake()">Reintentar</button>
+            } @else {
+              <div class="wake-head">
+                <span class="spinner"></span>
+                <strong>Despertando el servidor… {{ elapsedLabel() }}</strong>
+              </div>
+              <p class="small">Estuvo inactivo y tarda entre 1 y 2 minutos en arrancar. Puedes escribir tus datos mientras tanto: entrarás en cuanto esté listo.</p>
+              <div class="bar"><span></span></div>
+            }
+          </div>
         }
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="stack" novalidate>
@@ -48,19 +72,16 @@ import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
             <div class="alert alert-danger" role="alert">{{ error() }}</div>
           }
 
-          <button type="submit" [disabled]="loading()">
-            @if (loading()) { <span class="spinner"></span> Ingresando… } @else { Iniciar sesión }
+          <button type="submit" [disabled]="loading() || waitingToLogin()">
+            @if (waitingToLogin()) { <span class="spinner"></span> Entrarás en cuanto el servidor esté listo… }
+            @else if (loading()) { <span class="spinner"></span> Ingresando… }
+            @else { Iniciar sesión }
           </button>
-          <p class="server" [class.ready]="server() === 'ready'" [class.down]="server() === 'down'" role="status">
-            <span class="dot"></span>
-            @switch (server()) {
-              @case ('ready') { Servidor listo }
-              @case ('down') { No se pudo contactar al servidor; revisa tu conexión. }
-              @default { Conectando con el servidor… (si estuvo inactivo tarda hasta un minuto) }
-            }
-          </p>
-          @if (slow()) {
-            <p class="hint center">El servidor estaba inactivo y está despertando; puede tardar hasta un minuto.</p>
+          @if (waitingToLogin()) {
+            <button type="button" class="btn-ghost cancel" (click)="waitingToLogin.set(false)">Cancelar</button>
+          }
+          @if (server() === 'ready') {
+            <p class="server-ok" role="status"><span class="dot"></span> Servidor listo</p>
           }
         </form>
       </div>
@@ -77,16 +98,23 @@ import { FieldErrorComponent, IconComponent } from '../../../shared/ui';
     .pwd { position: relative; }
     .pwd input { padding-right: 2.75rem; }
     .pwd button { position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-    button[type=submit] { padding: .7rem; }
-    .center { text-align: center; }
-    .server { display: flex; gap: .45rem; align-items: center; justify-content: center; font-size: .8rem; color: var(--text-muted); }
-    .server .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); animation: pulse 1.2s infinite; }
-    .server.ready .dot { background: var(--success); animation: none; }
-    .server.down .dot { background: var(--danger); animation: none; }
-    @keyframes pulse { 50% { opacity: .3; } }
+    button[type=submit] { padding: .7rem; white-space: normal; }
+    .cancel { justify-self: center; margin-top: -.5rem; }
+    .wake { background: var(--warning-soft); color: var(--warning); border: 1px solid #fde68a; border-radius: var(--radius-sm);
+      padding: .8rem 1rem; display: grid; gap: .45rem; }
+    .wake.down { background: var(--danger-soft); color: var(--danger); border-color: #fecaca; display: flex;
+      justify-content: space-between; align-items: center; gap: .75rem; }
+    .wake-head { display: flex; gap: .5rem; align-items: center; }
+    .wake p { color: #78350f; }
+    .wake.down p { color: #7f1d1d; }
+    .bar { height: 4px; background: #fde68a; border-radius: 99px; overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 35%; background: var(--warning); border-radius: 99px; animation: slide 1.4s ease-in-out infinite; }
+    @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+    .server-ok { display: flex; gap: .45rem; align-items: center; justify-content: center; font-size: .8rem; color: var(--text-muted); }
+    .server-ok .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
   `]
 })
-export class LoginPage {
+export class LoginPage implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -95,10 +123,18 @@ export class LoginPage {
   readonly expirada = input<string | undefined>();
   readonly error = signal('');
   readonly loading = signal(false);
-  readonly slow = signal(false);
   readonly showPassword = signal(false);
-  /** El backend gratuito se duerme; se "despierta" en cuanto se abre el login. */
   readonly server = signal<'checking' | 'ready' | 'down'>('checking');
+  /** El usuario ya pidió entrar pero el servidor sigue despertando. */
+  readonly waitingToLogin = signal(false);
+  private readonly elapsed = signal(0);
+  readonly elapsedLabel = computed(() => {
+    const s = this.elapsed();
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  });
+  private wakeStart = 0;
+  private ticker?: ReturnType<typeof setInterval>;
+  private destroyed = false;
 
   readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],
@@ -106,18 +142,57 @@ export class LoginPage {
   });
 
   constructor() {
-    this.wakeServer();
-    if (this.auth.isLoggedIn()) this.router.navigateByUrl('/menu');
+    if (this.auth.isLoggedIn()) {
+      this.router.navigateByUrl('/menu');
+      return;
+    }
+    this.startWake();
   }
 
-  private wakeServer(attempt = 1): void {
-    // Cualquier respuesta HTTP (incluso 401 sin credenciales) significa que el servidor ya responde.
-    fetch(resolveApiUrl('/api/auth/me'), { method: 'GET' })
-      .then((res) => this.server.set(res.status === 502 || res.status === 503 ? 'checking' : 'ready'))
-      .then(() => {
-        if (this.server() === 'checking' && attempt < 12) setTimeout(() => this.wakeServer(attempt + 1), 5000);
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    clearInterval(this.ticker);
+  }
+
+  startWake(): void {
+    this.server.set('checking');
+    this.wakeStart = Date.now();
+    this.elapsed.set(0);
+    clearInterval(this.ticker);
+    this.ticker = setInterval(() => this.elapsed.set(Math.round((Date.now() - this.wakeStart) / 1000)), 1000);
+    this.ping();
+  }
+
+  /** Cualquier respuesta del backend (incluso 401 sin credenciales) significa que ya está arriba. */
+  private ping(): void {
+    if (this.destroyed) return;
+    const controller = new AbortController();
+    const abort = setTimeout(() => controller.abort(), WAKE_ATTEMPT_MS);
+    fetch(resolveApiUrl('/api/auth/me'), { signal: controller.signal, cache: 'no-store' })
+      .then((res) => {
+        clearTimeout(abort);
+        if (res.status >= 500) throw new Error('despertando');
+        this.onReady();
       })
-      .catch(() => (attempt < 12 ? setTimeout(() => this.wakeServer(attempt + 1), 5000) : this.server.set('down')));
+      .catch(() => {
+        clearTimeout(abort);
+        if (Date.now() - this.wakeStart > WAKE_LIMIT_MS) {
+          clearInterval(this.ticker);
+          this.server.set('down');
+          this.waitingToLogin.set(false);
+        } else {
+          setTimeout(() => this.ping(), 3000);
+        }
+      });
+  }
+
+  private onReady(): void {
+    clearInterval(this.ticker);
+    this.server.set('ready');
+    if (this.waitingToLogin()) {
+      this.waitingToLogin.set(false);
+      this.submit();
+    }
   }
 
   submit(): void {
@@ -125,28 +200,37 @@ export class LoginPage {
       this.form.markAllAsTouched();
       return;
     }
+    this.error.set('');
+    if (this.server() !== 'ready') {
+      if (this.server() === 'down') this.startWake();
+      this.waitingToLogin.set(true);
+      return;
+    }
 
     const { username, password } = this.form.getRawValue();
-    this.error.set('');
     this.loading.set(true);
-    const slowTimer = setTimeout(() => this.slow.set(true), 4000);
-
-    this.auth.login(username.trim(), password).subscribe({
-      next: () => {
-        clearTimeout(slowTimer);
-        this.router.navigateByUrl('/menu');
-      },
-      error: (err: unknown) => {
-        clearTimeout(slowTimer);
-        this.auth.logout();
-        this.loading.set(false);
-        this.slow.set(false);
-        this.error.set(
-          err instanceof HttpErrorResponse && err.status === 401
-            ? 'Usuario o contraseña incorrectos.'
-            : errorMessage(err, 'No fue posible iniciar sesión.')
-        );
-      }
-    });
+    this.auth
+      .login(username.trim(), password)
+      .pipe(
+        timeout(60_000),
+        // Si el servidor se volvió a dormir o está reiniciando, reintentar en vez de fallar.
+        retry({
+          count: 3,
+          delay: (err) =>
+            err instanceof HttpErrorResponse && err.status !== 0 && err.status < 500 ? throwError(() => err) : timer(3000)
+        })
+      )
+      .subscribe({
+        next: () => this.router.navigateByUrl('/menu'),
+        error: (err: unknown) => {
+          this.auth.logout();
+          this.loading.set(false);
+          this.error.set(
+            err instanceof HttpErrorResponse && err.status === 401
+              ? 'Usuario o contraseña incorrectos.'
+              : errorMessage(err, 'El servidor tardó demasiado en responder. Intenta de nuevo.')
+          );
+        }
+      });
   }
 }
